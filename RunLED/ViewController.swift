@@ -10,83 +10,131 @@ import UIKit
 
 class ViewController: UIViewController {
     
-    var n = 5, i: Int!
+    var n = 6
     var _margin: CGFloat = 40
     var lastOnLED = 100
-    var go: Int = 0 // 0: sang phai, 1: xuong, 2: sang trai, 3: len
-    var isTurnning: Bool = false // fasle: xoắn xuôi , xoắn: chạy ngược
+    var turn: String = "" // chiều đi : xuôi, ngược
+    var Root: [Int] = [0, 0, 0, 0] // vị trí cuối cùng có thể đi theo hướng cũ, gặp Root thì đổi hướng đi
+    var trend: String! // hướng đi: trái, phải, lên, xuống
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        i = 1
         drawRowOfBall()
+        prepareForStart("xuoi")
         let timer = NSTimer.scheduledTimerWithTimeInterval(0.5, target: self, selector: #selector(runningLED), userInfo: nil, repeats: true)
         
     }
     
     func runningLED() {
         turnOffLED()
-        // nếu là điểm chính giữa đưa đèn về điểm trước điểm chính giữa, đưa kiểu chạy (lên, xuống, trái, phải)là kiểu đi xuống
-        if (Int(lastOnLED / 100) + (lastOnLED % 100) == n) && (Int(lastOnLED / 100) - (lastOnLED % 100) == 1) {
-            isTurnning = true
-            go = 1
-            i = i - 1
-            lastOnLED = lastOnLED - 1
-            turnOnLED()
-        // xác định kiểu chạy tuỳ theo kiểu xoắn
-        } else {
-            
-            if go == 0 {
-                lastOnLED += 1
-            } else if go == 1 {
-                lastOnLED += 100
-            } else if go == 2 {
-                lastOnLED -= 1
+        trend = nextTrend(lastOnLED, currentTrend: trend, turn: turn)
+        lastOnLED = nextLED(trend)
+        
+        if isStop(lastOnLED) == true {
+            if turn == "xuoi" {
+                turn = "nguoc"
             } else {
-                lastOnLED -= 100
+                turn = "xuoi"
             }
-            
-            if isTurnning == true {
-                
-                if (Int(lastOnLED / 100) == i) && (lastOnLED % 100 == (i-2)) {
-                    go = 1
-                    i = i - 1
-                }
-                if (Int(lastOnLED / 100) == i) && (lastOnLED % 100 == (n - i)) {
-                    go = 2
-                }
-                if (Int(lastOnLED / 100) == n-i+1) && (lastOnLED % 100 == (n-i)) {
-                    go = 3
-                }
-                if (Int(lastOnLED / 100) == n-i+1) && (lastOnLED % 100 == (i-1)) {
-                    go = 0
-                }
-            
-            } else {
-                
-                if (Int(lastOnLED / 100) == i) && (lastOnLED % 100 == (i-1)) {
-                    go = 0
-                    i = i + 1
-                    lastOnLED = i * 100 + i - 1
-                }
-                if (Int(lastOnLED / 100) == i) && (lastOnLED % 100 == (n - i)) {
-                    go = 1
-                }
-                if (Int(lastOnLED / 100) == n-i+1) && (lastOnLED % 100 == (n-i)) {
-                    go = 2
-                }
-                if (Int(lastOnLED / 100) == n-i+1) && (lastOnLED % 100 == (i-1)) {
-                    go = 3
-                }
-                
-            }
-            turnOnLED()
-            
+            prepareForStart(turn) // chuẩn bị cho quá trình bắt đầu lại nếu bị stop
         }
-        // nếu là điểm đầu tiên thì đổi kiểu xoắn là false, đưa lại kiểu chạy về sang trái
-        if lastOnLED == 100 {
-            go = 0
-            isTurnning = false
+        turnOnLED()
+        
+    }
+    
+    func nextLED(trend: String) -> Int {
+        if trend == "trai" {
+            return lastOnLED - 1
+        } else if trend == "phai" {
+            return lastOnLED + 1
+        } else if trend == "xuong" {
+            return lastOnLED + 100
+        } else {
+            return lastOnLED - 100
+        }
+    }
+    
+    func nextTrend(currentLED: Int, currentTrend: String, turn: String) -> String{
+        // nếu gặp Root thì chuyển hướng và thay đổi Root sang vị trí mới
+        if turn == "xuoi" {
+            if currentLED == Root[0] {
+                Root[0] = Root[0] + 101
+                return "phai"
+            }
+            if currentLED == Root[1] {
+                Root[1] = Root[1] + 99
+                return "xuong"
+            }
+            if currentLED == Root[2] {
+                Root[2] = Root[2] - 99
+                return "len"
+            }
+            if currentLED == Root[3] {
+                Root[3] = Root[3] - 101
+                return "trai"
+            }
+            return currentTrend
+        } else {
+            if currentLED == Root[0] {
+                Root[0] = Root[0] - 101
+                return "xuong"
+            }
+            if currentLED == Root[1] {
+                Root[1] = Root[1] - 99
+                return "trai"
+            }
+            if currentLED == Root[2] {
+                Root[2] = Root[2] + 99
+                return "phai"
+            }
+            if currentLED == Root[3] {
+                Root[3] = Root[3] + 101
+                return "len"
+            }
+            return currentTrend
+        }
+        
+    }
+    
+    func isStop(currentLED: Int) -> Bool {
+        var v = Int(n/2) + 1
+        // currentLED = 100
+        if currentLED == 100 {
+            return true
+        }
+        // hoac vi tri trong cung tuy theo  gia tri cua n
+        if (n % 2 == 1) && (currentLED == v*101 - 1) {
+            return true
+        }
+        if (n % 2 == 0) && (currentLED == v * 101 - 2) {
+            return true
+        }
+        //thì trả về true
+        
+        //neu không trả về fasle
+        return false
+    }
+    
+    func prepareForStart(turn: String) {
+        // cài lại Root và trend để bắt đầu lại
+        if turn == "xuoi" {
+            Root[0] = 200
+            Root[1] = 99 + n
+            Root[2] = n * 100
+            Root[3] = n * 101 - 1
+            trend = "phai"
+            self.turn = "xuoi"
+        } else {
+            Root[0] = Root[0] - 101
+            Root[1] = Root[1] - 99
+            Root[2] = Root[2] + 99
+            Root[3] = Root[3] + 101
+            if (n % 2) == 0 {
+                trend = "phai"
+            } else {
+                trend = "trai"
+            }
         }
         
     }
